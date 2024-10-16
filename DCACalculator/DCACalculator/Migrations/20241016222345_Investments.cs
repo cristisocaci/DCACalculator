@@ -19,8 +19,7 @@ namespace DCACalculator.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StartDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    EndDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    MonthlyBugetUsd = table.Column<int>(type: "int", nullable: false)
+                    EndDate = table.Column<DateOnly>(type: "date", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -28,20 +27,21 @@ namespace DCACalculator.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Investments",
+                name: "InvestmentPlanProgress",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Ticker = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Percentage = table.Column<int>(type: "int", nullable: false),
-                    InvestmentPlanId = table.Column<int>(type: "int", nullable: false)
+                    InvestmentPlanId = table.Column<int>(type: "int", nullable: false),
+                    Symbol = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AmountInvestedEur = table.Column<double>(type: "float", nullable: false),
+                    AmountOwned = table.Column<double>(type: "float", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Investments", x => x.Id);
+                    table.PrimaryKey("PK_InvestmentPlanProgress", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Investments_InvestmentPlans_InvestmentPlanId",
+                        name: "FK_InvestmentPlanProgress_InvestmentPlans_InvestmentPlanId",
                         column: x => x.InvestmentPlanId,
                         principalTable: "InvestmentPlans",
                         principalColumn: "Id",
@@ -49,8 +49,8 @@ namespace DCACalculator.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Investments_InvestmentPlanId",
-                table: "Investments",
+                name: "IX_InvestmentPlanProgress_InvestmentPlanId",
+                table: "InvestmentPlanProgress",
                 column: "InvestmentPlanId");
         }
 
@@ -58,7 +58,7 @@ namespace DCACalculator.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Investments");
+                name: "InvestmentPlanProgress");
 
             migrationBuilder.DropTable(
                 name: "InvestmentPlans");

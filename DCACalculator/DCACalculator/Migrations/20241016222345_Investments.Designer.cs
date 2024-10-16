@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DCACalculator.Migrations
 {
     [DbContext(typeof(DCAContext))]
-    [Migration("20241016185110_Investments")]
+    [Migration("20241016222345_Investments")]
     partial class Investments
     {
         /// <inheritdoc />
@@ -75,31 +75,6 @@ namespace DCACalculator.Migrations
                     b.ToTable("HistoricalData");
                 });
 
-            modelBuilder.Entity("DCACalculator.Entities.Investment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("InvestmentPlanId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Percentage")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Ticker")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InvestmentPlanId");
-
-                    b.ToTable("Investments");
-                });
-
             modelBuilder.Entity("DCACalculator.Entities.InvestmentPlan", b =>
                 {
                     b.Property<int>("Id")
@@ -110,9 +85,6 @@ namespace DCACalculator.Migrations
 
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
-
-                    b.Property<int>("MonthlyBugetUsd")
-                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -126,10 +98,38 @@ namespace DCACalculator.Migrations
                     b.ToTable("InvestmentPlans");
                 });
 
-            modelBuilder.Entity("DCACalculator.Entities.Investment", b =>
+            modelBuilder.Entity("DCACalculator.Entities.InvestmentPlanProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("AmountInvestedEur")
+                        .HasColumnType("float");
+
+                    b.Property<double>("AmountOwned")
+                        .HasColumnType("float");
+
+                    b.Property<int>("InvestmentPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvestmentPlanId");
+
+                    b.ToTable("InvestmentPlanProgress");
+                });
+
+            modelBuilder.Entity("DCACalculator.Entities.InvestmentPlanProgress", b =>
                 {
                     b.HasOne("DCACalculator.Entities.InvestmentPlan", "InvestmentPlan")
-                        .WithMany("Investments")
+                        .WithMany("InvestmentProgress")
                         .HasForeignKey("InvestmentPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -139,7 +139,7 @@ namespace DCACalculator.Migrations
 
             modelBuilder.Entity("DCACalculator.Entities.InvestmentPlan", b =>
                 {
-                    b.Navigation("Investments");
+                    b.Navigation("InvestmentProgress");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,5 +1,7 @@
 using DCACalculator;
 using DCACalculator.Components;
+using DCACalculator.Services;
+using DCACalculator.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddDbContext<DCAContext>();
+builder.Services.Configure<CoinMarketCapApiOptions>(builder.Configuration.GetSection(CoinMarketCapApiOptions.CoinMarketCapApi));
+builder.Services.AddHttpClient<CoinMarketCapApi>();
+builder.Services.AddScoped<DCAInvestmentPlanService>();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 

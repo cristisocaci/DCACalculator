@@ -1,8 +1,11 @@
 ﻿@page "/investmentplans/create"
+@using DCACalculator.Models
+@using DCACalculator.Services
 @using Microsoft.EntityFrameworkCore
 @using DCACalculator.Entities
 @inject DCAContext context
 @inject NavigationManager NavigationManager
+@inject DCAInvestmentPlanService dcaService
 
 <PageTitle>Create</PageTitle>
 
@@ -16,16 +19,16 @@
             <ValidationSummary class="text-danger" />
             <div class="mb-3">
                 <label for="name" class="form-label d-block">Investments:</label>
-                @foreach(var investment in InvestmentPlan.Investments)
+                @foreach(var investment in Investments)
                 {
                     <div class="d-flex flex-row gap-3 mb-3">
-                        <InputSelect @bind-Value="investment.Ticker" class="form-control">
-                            @foreach(var opt in AvailableTickers)
+                        <InputSelect @bind-Value="investment.Symbol" class="form-control">
+                            @foreach(var opt in AvailableCoins)
                             {
                                 <option value="@opt">@opt</option>
                             }
                         </InputSelect>
-                        <InputNumber @bind-Value="investment.Percentage" class="form-control" />
+                        <InputNumber @bind-Value="investment.AmountEur" class="form-control" />
                     </div>
                 }
                 <button class="btn btn-primary" @onclick="AddInvestment">Add</button>
@@ -44,12 +47,7 @@
                 <label for="enddate" class="form-label">End Date:</label> 
                 <InputDate id="enddate" @bind-Value="InvestmentPlan.EndDate" class="form-control" /> 
                 <ValidationMessage For="() => InvestmentPlan.EndDate" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="monthlybugetusd" class="form-label">Monthly Buget:</label> 
-                <InputNumber id="monthlybugetusd" @bind-Value="InvestmentPlan.MonthlyBugetUsd" class="form-control" /> 
-                <ValidationMessage For="() => InvestmentPlan.MonthlyBugetUsd" class="text-danger" /> 
-            </div>        
+            </div>             
             <button type="submit" class="btn btn-primary" @onclick="AddInvestmentPlan">Create</button>
         </EditForm>
 
@@ -64,27 +62,32 @@
         EndDate = DateOnly.FromDateTime(DateTime.Now)
     };
 
-    private List<string> AvailableTickers = [];
+    private List<Investment> Investments = [];
+
+    private List<string> AvailableCoins = [];
 
 
     protected override async Task OnInitializedAsync()
     {
-        AvailableTickers = await context.AvailableCoins.Select(x => x.Symbol).ToListAsync();
+        AvailableCoins = await context.AvailableCoins.Select(x => x.Symbol).ToListAsync();
+        Investments.Add(new()
+        {
+            Symbol = ""
+        });
         await base.OnInitializedAsync();
     }
 
     private async Task AddInvestmentPlan()
     {
-        context.InvestmentPlans.Add(InvestmentPlan);
-        await context.SaveChangesAsync();
+        await dcaService.SimulateInvestmentPlanResults(InvestmentPlan, Investments);
         NavigationManager.NavigateTo("/investmentplans");
     }
 
     private void AddInvestment()
     {
-        InvestmentPlan.Investments.Add(new()
+        Investments.Add(new()
         {
-            Ticker = ""
+            Symbol = ""
         });
     }
 }

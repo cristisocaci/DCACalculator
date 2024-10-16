@@ -16,7 +16,7 @@ public partial class DCAContext : DbContext
     public virtual DbSet<AvailableCoin> AvailableCoins { get; set; }
     public virtual DbSet<HistoricalData> HistoricalData { get; set; }
     public virtual DbSet<InvestmentPlan> InvestmentPlans { get; set; }
-    public virtual DbSet<Investment> Investments { get; set; }
+    public virtual DbSet<InvestmentPlanProgress> InvestmentPlanProgress { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:DCACalculator");
