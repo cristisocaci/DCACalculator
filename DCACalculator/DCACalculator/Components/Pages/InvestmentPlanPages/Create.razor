@@ -13,7 +13,7 @@
 
 <hr />
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-5">
         <EditForm method="post" Model="InvestmentPlan" @onsubmit:preventDefault  FormName="create" Enhance>
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
@@ -47,7 +47,15 @@
                 <label for="enddate" class="form-label">End Date:</label> 
                 <InputDate id="enddate" @bind-Value="InvestmentPlan.EndDate" class="form-control" /> 
                 <ValidationMessage For="() => InvestmentPlan.EndDate" class="text-danger" /> 
-            </div>             
+            </div>            
+            <ul class="mb-4">
+                @foreach(var message in messageStore)
+                {
+                    <li class="text-danger">
+                        - @message
+                    </li>
+                }
+            </ul>
             <button type="submit" class="btn btn-primary" disabled="@AddingInvestmentPlan" @onclick="AddInvestmentPlan">Create</button>
         </EditForm>
 
@@ -55,6 +63,8 @@
 </div>
 
 @code {
+    private List<string> messageStore = [];
+
     private InvestmentPlan InvestmentPlan { get; set; } = new() 
     { 
         Name = "", 
@@ -77,14 +87,72 @@
         {
             Symbol = ""
         });
+
         await base.OnInitializedAsync();
+    }
+
+    private bool IsValid()
+    {
+        messageStore.Clear();
+
+        using var context = DbFactory.CreateDbContext();
+
+        if (!Investments.Where(x => !string.IsNullOrWhiteSpace(x.Symbol)).Any())
+        {
+            messageStore.Add("Please add investemnts");
+            return false;
+        }
+        var symbols = Investments.Select(x => x.Symbol + "/USD").ToList();
+
+        var historicalDataFiltered = context.HistoricalData
+          .Where(x => symbols.Contains(x.Symbol))
+          .GroupBy(x => x.Symbol)
+          .AsQueryable();
+
+        var maxDate = historicalDataFiltered.Select(x => x.Select(y => y.Date).Max()).Min();
+        var minDate = historicalDataFiltered.Select(x => x.Select(y => y.Date).Min()).Max();
+
+        if (string.IsNullOrWhiteSpace(InvestmentPlan.Name))
+        {
+            messageStore.Add("Please select a name");
+        }
+        if (InvestmentPlan.StartDate > InvestmentPlan.EndDate)
+        {
+            messageStore.Add("Start Date must be before End Date");
+        }
+
+        if (InvestmentPlan.StartDate > maxDate || InvestmentPlan.StartDate < minDate)
+        {
+            messageStore.Add($"Start Date must be between {minDate} and {maxDate}");
+        }
+
+        if (InvestmentPlan.EndDate > maxDate || InvestmentPlan.EndDate < minDate)
+        {
+            messageStore.Add($"End Date must be between {minDate} and {maxDate}");
+        }
+        if(Investments.Any(x => string.IsNullOrWhiteSpace(x.Symbol)))
+        {
+            messageStore.Add($"One of the investments has a missing symbol");
+        }
+
+        if (Investments.Any(x => x.AmountEur <= 0))
+        {
+            messageStore.Add($"One of the investments is lower than or equal to 0");
+        }
+
+        return !messageStore.Any();
+
     }
 
     private async Task AddInvestmentPlan()
     {
+        if (!IsValid())
+        {
+            return;
+        }
         AddingInvestmentPlan = true;
         await dcaService.SimulateInvestmentPlanResults(InvestmentPlan, Investments);
-        NavigationManager.NavigateTo("/investmentplans");
+        NavigationManager.NavigateTo("/");
     }
 
     private void AddInvestment()
