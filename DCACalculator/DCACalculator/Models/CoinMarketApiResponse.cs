@@ -2,12 +2,7 @@
 
 public class CoinMarketApiResponse
 {
-    public DataInfo Data { get; set; } = new();
-
-    public class DataInfo
-    {
-        public Dictionary<string, CoinInfo[]> Coins { get; set; } = [];
-    }
+    public Dictionary<string, CoinInfo[]> Data { get; set; } = new();
 
     public class CoinInfo
     {
@@ -19,6 +14,6 @@ public class CoinMarketApiResponse
 
     public class Quote
     {
-        public double Price { get; set; }
+        public double? Price { get; set; }
     }
 }

@@ -6,20 +6,22 @@ namespace DCACalculator.Services
 {
     public class DCAInvestmentPlanService
     {
-        private readonly DCAContext _context;
+        private readonly IDbContextFactory<DCAContext> _dbFactory;
 
-        public DCAInvestmentPlanService(DCAContext context)
+        public DCAInvestmentPlanService(IDbContextFactory<DCAContext> dbFactory)
         {
-            _context = context;
+            _dbFactory = dbFactory;
         }
 
         public async Task SimulateInvestmentPlanResults(InvestmentPlan investmentPlan, List<Investment> investments)
         {
+            using var context = _dbFactory.CreateDbContext();
+
             var currentDate = investmentPlan.StartDate;
             var eurusd = 1.0863; // TODO: get from api
 
 
-            var historicalData = (await _context.HistoricalData
+            var historicalData = (await context.HistoricalData
                 .Where(x =>
                     investmentPlan.StartDate <= x.Date && x.Date <= investmentPlan.EndDate &&
                     investments.Select(y => $"{y.Symbol}/USD").Contains(x.Symbol))
@@ -35,6 +37,7 @@ namespace DCACalculator.Services
             {
                 if (!historicalData.TryGetValue(currentDate, out var historicalDataForCurrentDate))
                 {
+                    currentDate = investmentPlan.StartDate.AddMonths(++i);
                     continue;
                 }
 
@@ -61,8 +64,8 @@ namespace DCACalculator.Services
                 AmountOwned = amountsOwned[x]
             }).ToList();
 
-            _context.InvestmentPlans.Add(investmentPlan);
-            await _context.SaveChangesAsync();
+            context.InvestmentPlans.Add(investmentPlan);
+            await context.SaveChangesAsync();
 
         }
     }

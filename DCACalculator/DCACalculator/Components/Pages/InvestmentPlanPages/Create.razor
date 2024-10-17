@@ -3,25 +3,25 @@
 @using DCACalculator.Services
 @using Microsoft.EntityFrameworkCore
 @using DCACalculator.Entities
-@inject DCAContext context
+@inject IDbContextFactory<DCACalculator.DCAContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject DCAInvestmentPlanService dcaService
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Create Investment Plans</PageTitle>
 
-<h1>Create Investment Plans</h1>
+<h2>Create Investment Plans</h2>
 
 <hr />
 <div class="row">
     <div class="col-md-4">
-        <EditForm method="post" Model="InvestmentPlan"  FormName="create" Enhance>
+        <EditForm method="post" Model="InvestmentPlan" @onsubmit:preventDefault  FormName="create" Enhance>
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
             <div class="mb-3">
                 <label for="name" class="form-label d-block">Investments:</label>
                 @foreach(var investment in Investments)
                 {
-                    <div class="d-flex flex-row gap-3 mb-3">
+                    <div key="@investment.Symbol" class="d-flex flex-row gap-3 mb-3">
                         <InputSelect @bind-Value="investment.Symbol" class="form-control">
                             @foreach(var opt in AvailableCoins)
                             {
@@ -48,7 +48,7 @@
                 <InputDate id="enddate" @bind-Value="InvestmentPlan.EndDate" class="form-control" /> 
                 <ValidationMessage For="() => InvestmentPlan.EndDate" class="text-danger" /> 
             </div>             
-            <button type="submit" class="btn btn-primary" @onclick="AddInvestmentPlan">Create</button>
+            <button type="submit" class="btn btn-primary" disabled="@AddingInvestmentPlan" @onclick="AddInvestmentPlan">Create</button>
         </EditForm>
 
     </div>
@@ -66,9 +66,12 @@
 
     private List<string> AvailableCoins = [];
 
+    private bool AddingInvestmentPlan = false;
 
     protected override async Task OnInitializedAsync()
     {
+        using var context = DbFactory.CreateDbContext();
+
         AvailableCoins = await context.AvailableCoins.Select(x => x.Symbol).ToListAsync();
         Investments.Add(new()
         {
@@ -79,12 +82,15 @@
 
     private async Task AddInvestmentPlan()
     {
+        AddingInvestmentPlan = true;
         await dcaService.SimulateInvestmentPlanResults(InvestmentPlan, Investments);
         NavigationManager.NavigateTo("/investmentplans");
     }
 
     private void AddInvestment()
     {
+        if (Investments.Any(x => x.Symbol == "")) return;
+
         Investments.Add(new()
         {
             Symbol = ""

@@ -2,6 +2,8 @@ using DCACalculator;
 using DCACalculator.Components;
 using DCACalculator.Services;
 using DCACalculator.Utils;
+using MudBlazor.Services;
+using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,11 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddDbContext<DCAContext>();
+builder.Services.AddDbContextFactory<DCAContext>();
+builder.Services.AddQuickGridEntityFrameworkAdapter();
+
 builder.Services.Configure<CoinMarketCapApiOptions>(builder.Configuration.GetSection(CoinMarketCapApiOptions.CoinMarketCapApi));
 builder.Services.AddHttpClient<CoinMarketCapApi>();
 builder.Services.AddScoped<DCAInvestmentPlanService>();
 builder.Services.AddMemoryCache();
+
+builder.Services.AddMudServices();
+builder.Services.AddSyncfusionBlazor();
 
 var app = builder.Build();
 

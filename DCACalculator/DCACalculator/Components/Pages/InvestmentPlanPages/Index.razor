@@ -1,0 +1,55 @@
+﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using DCACalculator.Entities
+@using DCACalculator
+@implements IAsyncDisposable
+@inject IDbContextFactory<DCACalculator.DCAContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Investment Plans</PageTitle>
+
+<h2>Investment Plans</h2>
+
+<div class="d-flex justify-content-end">
+    <a href="investmentplans/create" class="btn btn-primary rounded-3">Add</a>
+</div>
+
+<QuickGrid Class="table" Items="context.InvestmentPlans" @ref="InvestmentPlansQuickGrid">
+    <Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn Context="investmentPlan" Class="col-justify-start py-2 w-0">
+        <MudIconButton Icon="@Icons.Material.Filled.RemoveRedEye" aria-label="details" Color="Color.Primary" Size="Size.Small" OnClick="() => NavigateToDetails(investmentPlan.Id)" />
+    </Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn>
+
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="investmentplan => investmentplan.Name" Class="py-3" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Title="Start Date" Property="investmentplan => investmentplan.StartDate" Class="py-3" Format="dd MMM yyyy" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Title="End Date" Property="investmentplan => investmentplan.EndDate" Class="py-3" Format="dd MMM yyyy" />
+
+    <Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn Context="investmentPlan" Class="col-justify-end py-2">
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" aria-label="delete" Color="Color.Error" Size="Size.Small" OnClick="() => DeleteInvestmentPlan(investmentPlan)" />
+    </Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn>
+</QuickGrid>
+
+@code {
+    private DCAContext context = default!;
+    private QuickGrid<InvestmentPlan> InvestmentPlansQuickGrid = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    private async Task DeleteInvestmentPlan(InvestmentPlan investmentPlan)
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.InvestmentPlans.Remove(investmentPlan);
+
+        await context.SaveChangesAsync();
+        await InvestmentPlansQuickGrid.RefreshDataAsync();
+    }
+
+    private void NavigateToDetails(int id)
+    {
+        NavigationManager.NavigateTo($"/investmentplans/details?id={id}");
+    }
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

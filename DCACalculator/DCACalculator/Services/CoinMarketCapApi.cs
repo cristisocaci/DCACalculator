@@ -19,16 +19,19 @@ public class CoinMarketCapApi
         _memoryCache = memoryCache;
     }
 
-    public async Task<CoinMarketApiResponse?> GetQuotes(IEnumerable<string> symbols)
+    public async Task<CoinMarketApiResponse?> GetQuotes(IEnumerable<string> symbols, string target)
     {
         var symbolsCsv = string.Join(",", symbols);
-        var key = "CoinMarketCapApi-" + symbolsCsv;
+        var key = $"CoinMarketCapApi-{symbolsCsv}-{target}";
         return await _memoryCache.GetOrCreateAsync(key, async cacheEntry =>
         {
             cacheEntry.SetAbsoluteExpiration(DateTimeOffset.UtcNow.AddMinutes(5));
 
-            var route = QueryHelpers.AddQueryString("v2/cryptocurrency/quotes/latest", "symbol", symbolsCsv);
-            return await _httpClient.GetFromJsonAsync<CoinMarketApiResponse>(route);
+            var route = QueryHelpers.AddQueryString("v2/cryptocurrency/quotes/latest",
+                new Dictionary<string, string?> { { "symbol", symbolsCsv }, { "convert", target } });
+
+            var response = await _httpClient.GetFromJsonAsync<CoinMarketApiResponse>(route);
+            return response;
         });
     }
 }

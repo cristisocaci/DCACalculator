@@ -1,0 +1,184 @@
+﻿@page "/investmentplans/details"
+@using DCACalculator.Models
+@using DCACalculator.Services
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using DCACalculator.Entities
+
+@inject IDbContextFactory<DCACalculator.DCAContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject CoinMarketCapApi CoinMarketCapApi
+
+@implements IAsyncDisposable
+
+<PageTitle>Investment Plan Details</PageTitle>
+
+
+<h2 class="mb-8">Portofolio</h2>
+
+<div class="mb-8">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <h4 class="mb-0">
+            @FormatNumber(GetPortofolioValue())   
+        </h4>
+        <InputSelect @bind-Value="target" class="form-control d-inline w-fit-content">
+
+                <option value="EUR">EUR</option>
+                <option value="BTC">BTC</option>
+            
+        </InputSelect>
+    </div>
+    <div class="d-flex justify-content-between">
+        <div>
+            <span>Invested</span>
+            <h6>@GetTotalInvestment() @target</h6>
+        </div>
+        <div>
+            <span>Return</span>
+            <h6 class="@GetPortofolioProfitColor() fw-bold">
+                @FormatNumber(GetPortofolioProfit()) @target (@FormatPercentage(GetPortofolioProfitPercentage())%)
+            </h6>
+        </div>
+
+    </div>
+</div>
+<MudTable Items="investmentplan?.InvestmentProgress" Loading="investmentplan is null || eurQuotes is null || btcQuotes is null" LoadingProgressColor="Color.Info">
+    <RowTemplate>
+        <MudTd DataLabel="Symbol" Class="w-0">
+            <MudChip T="string" Size="Size.Medium" Label="true" Class="fw-bold">@context.Symbol</MudChip>
+        </MudTd>
+        <MudTd DataLabel="AmountOwned">
+            <h6>
+                @GetCoinName(context)
+            </h6>
+            <span>
+                @context.AmountOwned
+            </span>
+        </MudTd>
+        <MudTd DataLabel="Profit" Class="d-flex flex-column align-items-end">
+            <h6 >
+                @FormatNumber(GetCurrentValue(context)) @target
+            </h6>
+            <span class="@GetProfitColor(context) fw-bold">
+                @FormatNumber(GetProfit(context)) @target (@FormatPercentage(GetProfitPercentage(context))%)
+            </span>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+
+
+@code {
+    private InvestmentPlan? investmentplan;
+    private CoinMarketApiResponse? eurQuotes;
+    private CoinMarketApiResponse? btcQuotes;
+
+    private string target = "EUR";
+
+    private DCAContext context = default!;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+        investmentplan = await context.InvestmentPlans.Include(x => x.InvestmentProgress).FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (investmentplan is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        var symbols = investmentplan.InvestmentProgress.Select(x => x.Symbol);
+        eurQuotes = await CoinMarketCapApi.GetQuotes([.. symbols, "BTC"], "EUR");
+        btcQuotes = await CoinMarketCapApi.GetQuotes(symbols, "BTC");
+
+        if (eurQuotes is null || btcQuotes is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+    }
+
+    private double GetExchangeRate()
+    {
+        if(target == "EUR")
+        {
+            return 1;
+        }
+
+        var btcEur = eurQuotes?.Data["BTC"][0].Quote["EUR"].Price ?? 1;
+
+        return 1 / btcEur;
+    }
+
+    private CoinMarketApiResponse? GetQuotes() => target == "BTC" ? btcQuotes : eurQuotes;
+
+    private double GetPortofolioValue() => investmentplan?.InvestmentProgress.Select(GetCurrentValue).Sum() ?? 0;
+
+    private double GetTotalInvestment() => investmentplan?.InvestmentProgress.Select(x => x.AmountInvestedEur * GetExchangeRate()).Sum() ?? 0;
+
+    private double GetPortofolioProfit()
+    {
+        var value = GetPortofolioValue();
+        var invested = GetTotalInvestment();
+        var profit = value - invested;
+
+        return profit;
+    }
+
+    private double GetPortofolioProfitPercentage()
+    {
+        var value = GetPortofolioValue();
+        var invested = GetTotalInvestment();
+        var profit = Math.Abs(value - invested);
+
+        var profitPercentage = profit / invested * 100;
+        return profitPercentage;
+    }
+
+    private string GetPortofolioProfitColor() => GetPortofolioProfit() >= 0 ? "text-success" : "text-danger";
+
+    private string GetCoinName(InvestmentPlanProgress progress)
+    {
+        var quotes = GetQuotes();
+        return quotes?.Data[progress.Symbol][0].Name ?? "";
+    }
+
+    private double GetCurrentValue(InvestmentPlanProgress progress)
+    {
+        var quotes = GetQuotes();
+        return progress.AmountOwned * quotes?.Data[progress.Symbol][0].Quote[target].Price ?? 0;
+    }
+
+    private double GetProfit(InvestmentPlanProgress progress)
+    {
+        var currentValue = GetCurrentValue(progress);
+        var invested = progress.AmountInvestedEur * GetExchangeRate();
+        var profit = currentValue - invested;
+
+        return profit;
+    }
+
+    private double GetProfitPercentage(InvestmentPlanProgress progress)
+    {
+        var currentValue = GetCurrentValue(progress);
+        var invested = progress.AmountInvestedEur * GetExchangeRate();
+
+        var profit = Math.Abs(currentValue - invested);
+
+        var profitPercentage = profit / invested * 100;
+        return profitPercentage;
+
+    }
+
+    private string GetProfitColor(InvestmentPlanProgress progress) => GetProfit(progress) >= 0 ? "text-success" : "text-danger";
+
+    private string FormatNumber(double number) => target == "EUR" ? string.Format("{0:0.00}", number) : string.Format("{0:0.000000}", number);
+    private string FormatPercentage(double percentage) => string.Format("{0:0.00}", percentage);
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+}
