@@ -10,7 +10,7 @@
 <PageTitle>Chart</PageTitle>
 
 <h2 class="mb-6">Chart</h2>
-<div class="d-flex">
+<div class="d-flex flex-wrap">
 @foreach(var symbol in symbols)
 {
     <MudCheckBox T="bool" Value="@symbol.Checked" Label="@symbol.Symbol" Color="Color.Primary" ValueChanged="(e) => OnChange(symbol.Symbol, e)"></MudCheckBox>
