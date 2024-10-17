@@ -3,7 +3,6 @@ using DCACalculator.Components;
 using DCACalculator.Services;
 using DCACalculator.Utils;
 using MudBlazor.Services;
-using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +19,6 @@ builder.Services.AddScoped<DCAInvestmentPlanService>();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddMudServices();
-builder.Services.AddSyncfusionBlazor();
 
 var app = builder.Build();
 

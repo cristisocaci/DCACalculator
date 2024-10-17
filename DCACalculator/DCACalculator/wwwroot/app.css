@@ -57,3 +57,7 @@ h1:focus {
 .w-fit-content {
     width: fit-content;
 }
+
+.mud-charts-xaxis > text {
+    font-size: 8px
+}

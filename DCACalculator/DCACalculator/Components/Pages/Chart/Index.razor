@@ -1,0 +1,101 @@
+﻿@page "/chart"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using DCACalculator.Entities
+@using DCACalculator
+@using MudBlazor.Components.Chart.Models
+@inject IDbContextFactory<DCACalculator.DCAContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Chart</PageTitle>
+
+<h2 class="mb-6">Chart</h2>
+<div class="d-flex">
+@foreach(var symbol in symbols)
+{
+    <MudCheckBox T="bool" Value="@symbol.Checked" Label="@symbol.Symbol" Color="Color.Primary" ValueChanged="(e) => OnChange(symbol.Symbol, e)"></MudCheckBox>
+}
+</div>
+
+<div>
+    <MudTimeSeriesChart 
+                        TimeLabelFormat="MMM yyyy"
+                        ChartSeries="@_series"
+                        Width="100%" 
+                        ChartOptions="@_options"
+                        TimeLabelSpacing="@timeLabelSpacing" />
+</div>
+
+@code {
+    private List<HistoricalData> historicalData = [];
+
+    private List<TimeSeriesChartSeries> _series = new();
+    private TimeSpan timeLabelSpacing;
+    private string asd = "asd";
+    private List<SymbolCheckbox> symbols = [];
+
+    private ChartOptions _options = new ChartOptions
+        {
+            MaxNumYAxisTicks = 10,
+            YAxisTicks = 1,
+            YAxisRequireZeroPoint = true,
+            LineStrokeWidth = 1,
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var context = DbFactory.CreateDbContext();
+        symbols = await context.AvailableCoins.Select(x => new SymbolCheckbox(true, x.Symbol)).ToListAsync();
+
+        historicalData = await context.HistoricalData.ToListAsync();
+
+        ResetChart();
+    }
+    private void OnChange(string symbol, bool isChecked)
+    {
+        var symbolCheckbox = symbols.Find(x => x.Symbol == symbol);
+        symbolCheckbox.Checked = isChecked;
+        ResetChart();
+    }
+
+    private void ResetChart()
+    {
+        var historicalDataFiltered = historicalData
+          .Where(x => symbols.Where(y => y.Checked).Any(y => (y.Symbol + "/USD") == x.Symbol))
+          .Select(x => x.Date)
+          .DefaultIfEmpty();
+
+        var maxDate = historicalDataFiltered.Max();
+        var minDate = historicalDataFiltered.Min();
+
+        var totalNumberOfDays = maxDate.DayNumber - minDate.DayNumber;
+        timeLabelSpacing = TimeSpan.FromDays(totalNumberOfDays / 15);
+
+        _series = [];
+        int i = 0;
+        foreach (var symbol in symbols.Where(x => x.Checked))
+        {
+            _series.Add(new TimeSeriesChartSeries
+                {
+                    Index = i,
+                    Name = symbol.Symbol,
+                    Data = historicalData
+                                        .Where(x => x.Symbol == (symbol.Symbol + "/USD"))
+                                        .OrderBy(x => x.Date)
+                                        .Select(x => new TimeSeriesChartSeries.TimeValue(x.Date.ToDateTime(new TimeOnly(0, 0)), x.Close))
+                                        .ToList(),
+                    IsVisible = true,
+                    Type = TimeSeriesDiplayType.Line
+                });
+
+            i++;
+        }
+        StateHasChanged();
+    }
+
+    private class SymbolCheckbox(bool Checked, string Symbol)
+    {
+        public bool Checked { get; set; } = Checked;
+        public string Symbol { get; set; } = Symbol;
+    }
+}
